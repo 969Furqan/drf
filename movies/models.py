@@ -1,7 +1,7 @@
 from django.db import models
 
 # Create your models here.
-class Movies(models.Models):
+class Movies(models.Model):
     title = models.CharField(max_length=150)
     genres = models.JSONField(default=list)
 
