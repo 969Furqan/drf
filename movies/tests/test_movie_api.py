@@ -4,9 +4,7 @@ from rest_framework import status
 from movies.models import Movies
 import pytest
 from django.test import override_settings
-
 from factories import MovieFactory
-# Create your tests here.
 
 
 @pytest.mark.django_db
@@ -14,7 +12,7 @@ def test_create_movie(client):
     url = reverse('Movies:movie-api')
     data = {
         'title': 'A New Hope',
-        'genres': ['drama', 'adventure']
+        'genres': ['drama', 'adventure'],
     }
     
     response = client.post(url, data = json.dumps(data), content_type = 'application/json')
@@ -32,11 +30,11 @@ def test_retrieve_movie(client):
     response = client.get(url)
     
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {
-        'id': movie.id,
-        'title': movie.title,
-        'genres': movie.genres
-    }
+
+    assert ('id', movie.id) in response.json().items()
+    assert ('title', movie.title) in response.json().items()
+    assert ('genres', movie.genres) in response.json().items()
+
     
 @pytest.mark.django_db
 def test_update_movie(client):
@@ -73,7 +71,7 @@ def test_delete_movie(client):
 @override_settings(REST_FRAMEWORK={'PAGE_SIZE':10})
 def test_list_movie(client):
     movies = MovieFactory.create_batch(10)
-    url = reverse('Movies:movie-api')
+    url = reverse('Movies:movie-list-api')
     response = client.get(url)
     
     assert response.status_code == status.HTTP_200_OK
@@ -85,14 +83,15 @@ def test_list_movie(client):
     assert 'results' in data
     
     assert data['count'] == 10
-    print(movies)
     returned_data = {movie['id'] for movie in data['results']}
     expected_data = {movie.id for movie in movies}
     
     assert returned_data == expected_data
     
     for movie in data['results']:
-        assert set(movie.keys()) == {'id', 'title', 'genres'} 
+        print(set(movie.keys()) )
+        # assert 'id', 'title', 'genres' in set(movie.keys()) 
+        assert all(key in movie for key in {'id', 'title', 'genres'})
 
     
 

@@ -10,7 +10,10 @@ def test_valid_movie_serializer():
         "title": "inception",
         "genres": [
             "sci-fi", "fantasy"
-        ]
+        ],
+        "country":"pakistan",
+        "extra_data":{},
+        "release_year": 2024,
     }
     serializer = MovieSerializer(data = valid_data)
     assert serializer.is_valid()
@@ -44,7 +47,10 @@ def test_serialize_model_instance():
     assert serializer.data == {
         "id": new_movie.id,
         "title": new_movie.title,
-        "genres": new_movie.genres
+        "genres": new_movie.genres,
+        "country": None,
+        "extra_data": {},
+        "release_year": None
     }
     
     
