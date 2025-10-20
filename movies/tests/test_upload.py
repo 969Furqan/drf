@@ -1,0 +1,28 @@
+import pytest
+from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework.test import APIClient
+test_data = [(
+    "file.csv",
+    "text/csv",
+    b"title,genres,extra_data\ntest,comedy,{\"directors\": [\"name\"]}\n",
+    201,
+    ),
+    ("file.json",
+    "application/json",
+    b'[{"title": "test", "genres": ["comedy"], "extra_data": {"directors": ["name"]}}]',
+    201,
+    ),
+    ("file.txt",
+    "text/plain",
+    b"This is a test.",
+    400,
+    ),
+]
+
+@pytest.mark.parametrize(
+    "file_name, content_type, data, expected_status", test_data
+)
+@pytest.mark.django_db
+def test_upload(client: APIClient, file_name: str, content_type: str, file_content: str, expected_status: int):
+    pass
