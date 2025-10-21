@@ -2,6 +2,7 @@ from datetime import date, datetime
 from rest_framework import serializers
 from movies.models import Movies, UserPreferencesModel
 from rest_framework.validators import UniqueTogetherValidator
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 class MovieSerializer(serializers.ModelSerializer):
     class Meta:
@@ -61,3 +62,15 @@ class WatchHistorySerializer(serializers.Serializer):
     directors = serializers.ListField(child = serializers.CharField(), required = False)
     genre = serializers.ListField(child = serializers.CharField(), required = False)
     year = serializers.ListField(child = serializers.CharField(), required = False)
+    
+    
+class UploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    
+    def validate_file(self, value:InMemoryUploadedFile) -> InMemoryUploadedFile:
+        if value.size > 10485760:
+            raise serializers.ValidationError("file exceeds the size limit of 10mb")
+        allowed_types = ["text/csv", "application/json", "application/xml", ]
+        if value.content_type not in allowed_types:
+            raise serializers.ValidationError(f"{value.content_type} is not a valid type")
+        return value

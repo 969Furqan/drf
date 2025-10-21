@@ -71,7 +71,7 @@ def test_delete_movie(client):
 @override_settings(REST_FRAMEWORK={'PAGE_SIZE':10})
 def test_list_movie(client):
     movies = MovieFactory.create_batch(10)
-    url = reverse('Movies:movie-list-api')
+    url = reverse('Movies:movie-api')
     response = client.get(url)
     
     assert response.status_code == status.HTTP_200_OK

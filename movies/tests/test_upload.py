@@ -21,8 +21,13 @@ test_data = [(
 ]
 
 @pytest.mark.parametrize(
-    "file_name, content_type, data, expected_status", test_data
+    "file_name, content_type, file_content, expected_status", test_data
 )
 @pytest.mark.django_db
 def test_upload(client: APIClient, file_name: str, content_type: str, file_content: str, expected_status: int):
-    pass
+    url = reverse("Movies:upload_movie")
+    upload_file = SimpleUploadedFile(name=file_name, content= file_content, content_type= content_type,  )
+    
+    response = client.post(url, {'file': upload_file}, format = 'multipart')
+    
+    assert response.status_code == expected_status

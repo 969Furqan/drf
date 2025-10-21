@@ -1,13 +1,17 @@
-from django.shortcuts import get_object_or_404
 from requests import Request
-from rest_framework import views, status
+from rest_framework import status
 from rest_framework.response import Response
-
-from movies.services import add_preferences, user_preferences, add_watch_history, user_watch_history
-from .models import Movies, UserPreferencesModel
+from .models import Movies
 from .serializers import AddToWatchHistorySerializer, MovieSerializer, AddPreferenceSerializer
 from rest_framework import generics
+from movies.services import add_preferences, user_preferences, add_watch_history, user_watch_history
 from django.contrib.auth import get_user_model
+from contextlib import contextmanager
+from django.core.files.storage import default_storage
+from rest_framework.views import APIView
+from typing import Any
+from movies.serializers import UploadSerializer
+from movies.services import FileProcessor
 
 User = get_user_model()
 
@@ -56,13 +60,10 @@ class RetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Movies.objects.all()
     serializer_class = MovieSerializer
     
-class ListAPIView(generics.ListAPIView):
+class MovieListCreateAPIView(generics.ListCreateAPIView):
     queryset = Movies.objects.all().order_by('id')
     serializer_class = MovieSerializer
     
-class CreateAPIView(generics.CreateAPIView):
-    queryset = Movies.objects.all()
-    serializer_class = MovieSerializer
     
 
 # class MovieAPIView(views.APIView):
@@ -107,3 +108,33 @@ class CreateAPIView(generics.CreateAPIView):
 #         movie = get_object_or_404(Movies, pk = pk)
 #         movie.delete()
 #         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+@contextmanager
+def temp_upload(uploaded_file):
+    try:
+        file_name = default_storage.save(uploaded_file.name, uploaded_file)
+        file_path = default_storage.path(file_name)
+        yield file_path
+    finally:
+        default_storage.delete(file_name)
+    
+class GeneralUploadView(APIView):
+    def post(self, request, *args:Any, **kwargs: Any) -> Response:
+        serializer = UploadSerializer(data = request.data)
+        if serializer.is_valid():
+            print(serializer.validated_data)
+            uploaded_file = serializer.validated_data["file"]
+            file_type = uploaded_file.content_type
+            with temp_upload(uploaded_file) as file_path:
+                processor = FileProcessor()
+                movies_processed = processor.process(file_path, file_type)
+                return Response({
+                    "message": f"{movies_processed} processed successfully"
+                },
+                        status = status.HTTP_201_CREATED,
+                    )
+        else:
+            return Response(serializer.errors, status = status.HTTP_400_BAD_REQUEST)
+                

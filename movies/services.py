@@ -1,10 +1,14 @@
 from typing import Dict, Any
 from collections import defaultdict
-from django.db import IntegrityError, transaction
+from django.db import  transaction
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from movies.models import UserPreferencesModel, Movies
-from .serializers import PreferenceSerializer, WatchHistorySerializer
+from .serializers import PreferenceSerializer
+from django.core.exceptions import ValidationError
+import datetime
+
+
 
 def add_preferences(user_id:int, new_preferences:Dict[str, Any]) -> None:
     with transaction.Atomic():
@@ -54,3 +58,62 @@ def user_watch_history(user_id: int) -> dict[str, Any]:
     user_preferences = get_object_or_404(UserPreferencesModel,
     user_id=user_id)
     return {"watch_history": user_preferences.watch_history}
+
+# upload stuf
+
+import csv
+import json
+from django.core.exceptions import ValidationError
+from typing import Callable
+def parse_csv(file_path: str) -> int:
+    movies_processed = 0
+    with open(file_path, encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            create_or_update_movie(**row)
+            movies_processed += 1
+    return movies_processed
+
+
+def parse_json(file_path: str) -> int:
+    movies_processed = 0
+    with open(file_path, encoding="utf-8") as file:
+        data = json.load(file)
+        for item in data:
+            create_or_update_movie(**item)
+            movies_processed += 1
+    return movies_processed
+class FileProcessor:
+    def process(self, file_path: str, file_type: str) -> int:
+        if file_type == "text/csv":
+            movies_processed = parse_csv(file_path)
+        elif file_type == "application/json":
+            movies_processed = parse_json(file_path)
+        else:
+            raise ValidationError("Invalid file type")
+        return movies_processed
+    
+    
+def create_or_update_movie(
+    title:str,
+    genres:list,
+    country: str | None = None,
+    extra_data: dict[Any, Any] | None = None,
+    release_year: int | None = None,
+):
+    try:
+        current_year = datetime.datetime.now().year
+        if release_year is not None and (release_year < current_year and release_year > 1888):
+            raise ValidationError("the release year has to be between 1888 and 2025")
+        movie, created = Movies.objects.update_or_create(
+            title= title,
+            defaults={
+                "genres":genres,
+                "country":country,
+                "extra_data":extra_data,
+                "release_year":release_year
+            }
+        )
+        return movie, created
+    except Exception as e:
+        raise ValidationError(f"failed to create or update the movie {str(e)}")
