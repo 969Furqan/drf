@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from typing import Any
 from movies.serializers import UploadSerializer
 from movies.services import FileProcessor
-
+from rest_framework.permissions import IsAuthenticated
 User = get_user_model()
 
 class UserWatchHistoryAPIView(generics.RetrieveUpdateAPIView):
@@ -63,6 +63,7 @@ class RetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 class MovieListCreateAPIView(generics.ListCreateAPIView):
     queryset = Movies.objects.all().order_by('id')
     serializer_class = MovieSerializer
+    permission_classes = [IsAuthenticated]
     
     
 
