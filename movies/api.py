@@ -12,9 +12,11 @@ from rest_framework.views import APIView
 from typing import Any
 from movies.serializers import UploadSerializer
 from movies.services import FileProcessor
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from api_auth.permissions import CustomModelPermissions
+from rest_framework.decorators import permission_classes
 User = get_user_model()
-
+@permission_classes([IsAuthenticated])
 class UserWatchHistoryAPIView(generics.RetrieveUpdateAPIView):
     def post(self, request:Request, user_id:int) -> Response:
         serializer = AddToWatchHistorySerializer(data = request.data)
@@ -36,6 +38,7 @@ class UserWatchHistoryAPIView(generics.RetrieveUpdateAPIView):
         return Response(data)
             
 
+@permission_classes([IsAuthenticated])
 class UserPreferenceAPIView(generics.RetrieveUpdateAPIView):
 
     def get(self, request:Request, user_id:int) -> Response:
@@ -63,7 +66,7 @@ class RetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 class MovieListCreateAPIView(generics.ListCreateAPIView):
     queryset = Movies.objects.all().order_by('id')
     serializer_class = MovieSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CustomModelPermissions]
     
     
 
@@ -120,7 +123,8 @@ def temp_upload(uploaded_file):
         yield file_path
     finally:
         default_storage.delete(file_name)
-    
+
+@permission_classes([IsAdminUser]) 
 class GeneralUploadView(APIView):
     def post(self, request, *args:Any, **kwargs: Any) -> Response:
         serializer = UploadSerializer(data = request.data)
