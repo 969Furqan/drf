@@ -6,12 +6,13 @@ from django.shortcuts import get_object_or_404
 from movies.models import UserPreferencesModel, Movies
 from .serializers import PreferenceSerializer
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 import datetime
 
 
 
 def add_preferences(user_id:int, new_preferences:Dict[str, Any]) -> None:
-    with transaction.Atomic():
+    with transaction.atomic():
         user = get_object_or_404(get_user_model(),id = user_id)
         (user_preferences, created) = UserPreferencesModel.objects.select_for_update().get_or_create( user_id = user.id, defaults = {'preferences':{}})
         
@@ -65,33 +66,59 @@ import csv
 import json
 from django.core.exceptions import ValidationError
 from typing import Callable
-def parse_csv(file_path: str) -> int:
+def parse_csv(file_input) -> int:
     movies_processed = 0
-    with open(file_path, encoding="utf-8") as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            create_or_update_movie(**row)
-            movies_processed += 1
+    
+    # Handle both file paths and InMemoryUploadedFile objects
+    if hasattr(file_input, 'read'):
+        # It's a file-like object (InMemoryUploadedFile)
+        file_input.seek(0)  # Reset file pointer to beginning
+        content = file_input.read().decode('utf-8')
+        reader = csv.DictReader(content.splitlines())
+    else:
+        # It's a file path string
+        with open(file_input, encoding="utf-8") as file:
+            reader = csv.DictReader(file)
+    
+    for row in reader:
+        create_or_update_movie(**row)
+        movies_processed += 1
     return movies_processed
 
 
-def parse_json(file_path: str) -> int:
+def parse_json(file_input) -> int:
     movies_processed = 0
-    with open(file_path, encoding="utf-8") as file:
-        data = json.load(file)
-        for item in data:
-            create_or_update_movie(**item)
-            movies_processed += 1
+    
+    # Handle both file paths and InMemoryUploadedFile objects
+    if hasattr(file_input, 'read'):
+        # It's a file-like object (InMemoryUploadedFile)
+        file_input.seek(0)  # Reset file pointer to beginning
+        content = file_input.read().decode('utf-8')
+        data = json.loads(content)
+    else:
+        # It's a file path string
+        with open(file_input, encoding="utf-8") as file:
+            data = json.load(file)
+    
+    for item in data:
+        create_or_update_movie(**item)
+        movies_processed += 1
     return movies_processed
 class FileProcessor:
-    def process(self, file_path: str, file_type: str) -> int:
-        if file_type == "text/csv":
-            movies_processed = parse_csv(file_path)
-        elif file_type == "application/json":
-            movies_processed = parse_json(file_path)
+    def process(self, file_name: str, file_type: str) -> int:
+        # Check if the file exists in the default storage
+        if default_storage.exists(file_name):
+        # Open the file directly from storage
+            with default_storage.open(file_name, "r") as file:
+                if file_type == "text/csv":
+                    movies_processed = parse_csv(file)
+                elif file_type == "application/json":
+                    movies_processed = parse_json(file)
+                else:
+                    raise ValidationError("Invalid file type")
+            return movies_processed
         else:
-            raise ValidationError("Invalid file type")
-        return movies_processed
+            raise ValidationError("File does not exist in storage.")
     
     
 def create_or_update_movie(

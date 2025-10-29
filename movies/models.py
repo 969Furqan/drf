@@ -7,9 +7,9 @@ from django.conf import settings
 
 # Create your models here.
 class Movies(models.Model):
-    title = models.CharField(max_length=150)
+    title = models.CharField(max_length=500)
     genres = models.JSONField(default=list)
-    country = models.CharField(max_length=200, null=True, blank= True)
+    country = models.CharField(max_length=500, null=True, blank= True)
     extra_data = models.JSONField(default=dict)
     directors = models.JSONField(default=list)
     release_year = models.IntegerField(

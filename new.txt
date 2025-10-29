@@ -14,7 +14,9 @@
 # -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxMjk4MzE5LCJpYXQiOjE3NjEyOTgwMTksImp0aSI6Ijc3YTBkMzk1Zjc3YzQ0ZmY5NDViNzFmODRhNTA3NDJiIiwidXNlcl9pZCI6IjEifQ.WW1LPz3M1hAprZWNtXG-6faUcv_6zweXZwPc4aao8fA" \
 #  http://localhost:8000/api/movies/
 
-curl -X GET \
--H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxMzAxMjcxLCJpYXQiOjE3NjEzMDA5NzEsImp0aSI6IjU4MGJmNTIxYzEyNDQ3ZDE5MTdiODJhOTE2YzVjNTZjIiwidXNlcl9pZCI6IjIifQ.JWYAwqRSdUGrPqNPkcNicqJMEzrpWNOmzyHE4azLnec" \
-http://localhost:8000/api/movies/
-{"detail":"You do not have permission to perform this action."}%
+# curl -X GET \
+# -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzYxMzAxMjcxLCJpYXQiOjE3NjEzMDA5NzEsImp0aSI6IjU4MGJmNTIxYzEyNDQ3ZDE5MTdiODJhOTE2YzVjNTZjIiwidXNlcl9pZCI6IjIifQ.JWYAwqRSdUGrPqNPkcNicqJMEzrpWNOmzyHE4azLnec" \
+# http://localhost:8000/api/movies/
+# {"detail":"You do not have permission to perform this action."}%
+
+curl -X POST -F "file=@movies/all_movies_data.csv;type=text/csv" http://localhost:8000/api/upload/

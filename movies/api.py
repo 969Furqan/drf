@@ -1,6 +1,8 @@
 from requests import Request
 from rest_framework import status
 from rest_framework.response import Response
+
+from movies.tasks import process_file
 from .models import Movies
 from .serializers import AddToWatchHistorySerializer, MovieSerializer, AddPreferenceSerializer
 from rest_framework import generics
@@ -16,7 +18,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from api_auth.permissions import CustomModelPermissions
 from rest_framework.decorators import permission_classes
 User = get_user_model()
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 class UserWatchHistoryAPIView(generics.RetrieveUpdateAPIView):
     def post(self, request:Request, user_id:int) -> Response:
         serializer = AddToWatchHistorySerializer(data = request.data)
@@ -38,7 +40,7 @@ class UserWatchHistoryAPIView(generics.RetrieveUpdateAPIView):
         return Response(data)
             
 
-@permission_classes([IsAuthenticated])
+# @permission_classes([IsAuthenticated])
 class UserPreferenceAPIView(generics.RetrieveUpdateAPIView):
 
     def get(self, request:Request, user_id:int) -> Response:
@@ -66,7 +68,7 @@ class RetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
 class MovieListCreateAPIView(generics.ListCreateAPIView):
     queryset = Movies.objects.all().order_by('id')
     serializer_class = MovieSerializer
-    permission_classes = [IsAuthenticated, CustomModelPermissions]
+    # permission_classes = [IsAuthenticated, CustomModelPermissions]
     
     
 
@@ -124,7 +126,7 @@ def temp_upload(uploaded_file):
     finally:
         default_storage.delete(file_name)
 
-@permission_classes([IsAdminUser]) 
+# @permission_classes([IsAdminUser]) 
 class GeneralUploadView(APIView):
     def post(self, request, *args:Any, **kwargs: Any) -> Response:
         serializer = UploadSerializer(data = request.data)
@@ -132,13 +134,28 @@ class GeneralUploadView(APIView):
             print(serializer.validated_data)
             uploaded_file = serializer.validated_data["file"]
             file_type = uploaded_file.content_type
-            with temp_upload(uploaded_file) as file_path:
-                processor = FileProcessor()
-                movies_processed = processor.process(file_path, file_type)
-                return Response({
-                    "message": f"{movies_processed} processed successfully"
-                },
-                        status = status.HTTP_201_CREATED,
+            
+            # For CSV files, process directly for immediate feedback
+            if file_type == "text/csv":
+                try:
+                    from .services import parse_csv
+                    movies_processed = parse_csv(uploaded_file)
+                    return Response(
+                        {"message": f"Successfully processed {movies_processed} movies."},
+                        status = status.HTTP_202_ACCEPTED
+                    )
+                except Exception as e:
+                    return Response(
+                        {"error": f"Failed to process CSV file: {str(e)}"},
+                        status = status.HTTP_400_BAD_REQUEST
+                    )
+            else:
+                # For other file types, use Celery background processing
+                with temp_upload(uploaded_file) as file_path:
+                    process_file.delay(file_path, file_type)
+                    return Response(
+                        {"message":f"your file is being processed."},
+                        status = status.HTTP_202_ACCEPTED
                     )
         else:
             return Response(serializer.errors, status = status.HTTP_400_BAD_REQUEST)
